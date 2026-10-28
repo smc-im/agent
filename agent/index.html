@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#05080f">
+  <title>PHYS·LAB — 大学物理 3D 智能实验助教</title>
+  <meta name="description" content="面向大学物理实验学习场景的 3D 可视化智能体：自然语言生成实验场景、实时调参、原理讲解、误差分析与思考题答疑。">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23070c16'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%235ee3ff'/%3E%3Cellipse cx='32' cy='32' rx='22' ry='9' fill='none' stroke='%235ee3ff' stroke-width='2' transform='rotate(30 32 32)'/%3E%3Cellipse cx='32' cy='32' rx='22' ry='9' fill='none' stroke='%23a78bfa' stroke-width='2' transform='rotate(-30 32 32)'/%3E%3C/svg%3E">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+
+  <div class="app-shell" id="appShell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48" fill="none">
+            <rect x="1" y="1" width="46" height="46" rx="13" stroke="rgba(94,227,255,.28)"/>
+            <circle cx="24" cy="24" r="4.2" fill="#5ee3ff"/>
+            <ellipse cx="24" cy="24" rx="17" ry="6.5" stroke="#5ee3ff" stroke-width="1.5" transform="rotate(32 24 24)"/>
+            <ellipse cx="24" cy="24" rx="17" ry="6.5" stroke="#a78bfa" stroke-width="1.5" transform="rotate(-32 24 24)"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <strong>PHYS<span>LAB</span></strong>
+          <small>3D 智能实验助教</small>
+        </div>
+      </div>
+
+      <div class="topbar-center">
+        <span class="status-pill"><i class="pulse-dot"></i><span>本地智能体已就绪</span></span>
+        <span class="topbar-sep"></span>
+        <span class="topbar-note"><i class="webgl-dot" id="webglDot"></i><span id="webglState">WebGL 初始化中</span></span>
+        <span class="topbar-sep"></span>
+        <span class="topbar-note">自然语言 · 3D 渲染 · 教学讲解</span>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="btn btn-ghost" id="btnGuide" type="button">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M10 17.5a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Z" stroke="currentColor" stroke-width="1.3"/><path d="M7.9 7.7a2.2 2.2 0 1 1 3.2 2c-.8.45-1.1.9-1.1 1.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="10" cy="14.2" r=".85" fill="currentColor"/></svg>
+          使用指南
+        </button>
+        <button class="btn btn-ghost icon-only" id="btnDashboard" type="button" title="学习看板">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M3.5 16.5V9M8.2 16.5V4.5M12.9 16.5v-5.2M17.5 16.5V7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+        <button class="btn btn-demo" id="btnDemo" type="button">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M7.2 4.8v10.4l8-5.2-8-5.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+          评委演示
+        </button>
+        <button class="btn btn-primary" id="btnShare" type="button">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M8.2 11.8 14 6M8.2 11.8l1.7 4.1 1.4-3.2 3.2-1.4-4.1-1.7M8.2 11.8 4.1 10.1l3.2-1.4 1.4-3.2 1.7 4.1" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          生成预览链接
+        </button>
+      </div>
+    </header>
+
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-heading">
+          <span class="eyebrow">EXPERIMENT LIBRARY</span>
+          <span class="count-badge" id="expCount">0</span>
+        </div>
+        <div class="search-box">
+          <svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.6" stroke="currentColor" stroke-width="1.4"/><path d="m13.4 13.4 3.1 3.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          <input id="searchInput" type="text" placeholder="搜索实验 / 知识点" autocomplete="off" aria-label="搜索实验">
+          <kbd>⌘K</kbd>
+        </div>
+      </div>
+
+      <div class="experiment-list" id="experimentList" role="list"></div>
+
+      <div class="sidebar-bottom">
+        <button class="phet-card" id="btnPhet" type="button">
+          <div class="phet-icon">P</div>
+          <div class="phet-text">
+            <strong>PhET 资源映射</strong>
+            <small>9 个实验 · 中文站配套资源</small>
+          </div>
+          <svg viewBox="0 0 20 20" fill="none"><path d="M7 4.5h8.5V13M15 5 5 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <div class="local-note">
+          <span class="local-dot"></span>
+          <span>本地渲染 · 无需上传数据</span>
+          <span class="version">v1.0</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="stage">
+      <section class="viewer-card" id="viewerCard">
+        <div id="viewer" class="viewer-canvas" aria-label="三维实验场景"></div>
+        <div class="viewer-grid-overlay"></div>
+        <div class="viewer-vignette"></div>
+
+        <div class="viewer-head">
+          <div class="viewer-kicker">
+            <span class="live-pill"><i></i>LIVE 3D</span>
+            <span class="scene-category" id="sceneCategory">光学</span>
+          </div>
+          <h1 id="sceneTitle">迈克尔逊干涉仪</h1>
+          <p id="sceneSub">分振幅干涉 · 等倾圆环 · 光程差测量</p>
+          <div class="scene-tags" id="sceneTags"></div>
+        </div>
+
+        <div class="viewer-tools" role="toolbar" aria-label="三维视图工具">
+          <button class="tool-btn" id="btnRotate" type="button" title="自动旋转" aria-pressed="false">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M16 8.2A6.4 6.4 0 1 0 16 12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M16.2 4.6v3.9h-3.9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/></svg>
+          </button>
+          <button class="tool-btn" id="btnExplode" type="button" title="拆解视图" aria-pressed="false">
+            <svg viewBox="0 0 20 20" fill="none"><path d="m10 3 6 3.2v7.6L10 17l-6-3.2V6.2L10 3Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="m4 6.2 6 3.3 6-3.3M10 9.5V17" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="tool-btn" id="btnResetView" type="button" title="重置视角">
+            <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="5.8" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="10" r="1.4" fill="currentColor"/><path d="M10 1.8v2.4M10 15.8v2.4M1.8 10h2.4M15.8 10h2.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          </button>
+          <button class="tool-btn" id="btnMeasure" type="button" title="实验测量 / 数据表">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M3.5 4.2h13v11.6h-13V4.2Z" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 8h13M7.2 8v7.8M11 8v7.8" stroke="currentColor" stroke-width="1.2"/><path d="M5.2 6.2h1.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          </button>
+          <button class="tool-btn" id="btnFullscreen" type="button" title="全屏查看">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M7 3H3v4M13 3h4v4M17 13v4h-4M7 17H3v-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+
+        <div class="label-layer" id="labelLayer"></div>
+
+        <div class="viewer-foot">
+          <div class="quick-params" id="quickParams"></div>
+          <div class="viewer-hint">
+            <span class="mouse-icon"></span>
+            拖动旋转 · 滚轮缩放 · 右键平移
+          </div>
+        </div>
+
+        <div class="loading-overlay" id="loadingOverlay" aria-live="polite">
+          <div class="loader-orbit">
+            <span></span><span></span><span></span>
+            <div class="loader-core"></div>
+          </div>
+          <div class="loading-title" id="loadingTitle">正在构建三维实验场景</div>
+          <div class="loading-sub" id="loadingSub">解析指令 · 布置光路 · 生成交互</div>
+          <div class="loading-bar"><i id="loadingBar"></i></div>
+        </div>
+      </section>
+
+      <section class="workflow-card" aria-label="智能体任务流">
+        <div class="workflow-heading">
+          <span class="workflow-spark">
+            <svg viewBox="0 0 20 20" fill="none"><path d="M10 2.5 11.6 8l5.4 1.6-5.4 1.6L10 16.7l-1.6-5.5L3 9.6 8.4 8 10 2.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+          </span>
+          <span>智能体任务流</span>
+          <span class="agent-state" id="agentState">待命</span>
+        </div>
+        <div class="flow-steps">
+          <div class="flow-step" data-step="parse">
+            <div class="flow-index">01</div>
+            <div class="flow-copy"><strong>语义解析</strong><small id="flowParse">等待指令</small></div>
+          </div>
+          <div class="flow-line"></div>
+          <div class="flow-step" data-step="plan">
+            <div class="flow-index">02</div>
+            <div class="flow-copy"><strong>场景规划</strong><small id="flowPlan">等待指令</small></div>
+          </div>
+          <div class="flow-line"></div>
+          <div class="flow-step" data-step="render">
+            <div class="flow-index">03</div>
+            <div class="flow-copy"><strong>3D 渲染</strong><small id="flowRender">等待指令</small></div>
+          </div>
+          <div class="flow-line"></div>
+          <div class="flow-step" data-step="teach">
+            <div class="flow-index">04</div>
+            <div class="flow-copy"><strong>教学编排</strong><small id="flowTeach">等待指令</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="console-card">
+        <div class="console-heading">
+          <div>
+            <span class="console-label">NATURAL LANGUAGE CONSOLE</span>
+            <span class="console-title">直接描述你想观察的物理实验</span>
+          </div>
+          <span class="console-tip">Enter 运行 · Shift + Enter 换行</span>
+        </div>
+        <div class="command-box">
+          <span class="prompt-mark">›</span>
+          <textarea id="commandInput" rows="1" placeholder="例如：画出迈克尔逊干涉仪结构，标出分光板位置" spellcheck="false" aria-label="自然语言指令"></textarea>
+          <button class="run-btn" id="btnSend" type="button">
+            <span>运行</span>
+            <svg viewBox="0 0 20 20" fill="none"><path d="M4 10h11M11 5.5 15.5 10 11 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="suggestions" id="suggestions"></div>
+      </section>
+    </main>
+
+    <aside class="teach-panel">
+      <div class="teach-head">
+        <div class="avatar">
+          <span>理</span>
+          <i class="avatar-status"></i>
+        </div>
+        <div class="teach-id">
+          <strong>物理助教 · 小理</strong>
+          <small><i></i>本地知识库在线</small>
+        </div>
+        <button class="icon-button" id="btnResetChat" type="button" title="清空对话">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M4.5 6.5h11M8 3.8h4M6 6.5l.7 9.1c.04.6.55 1.1 1.2 1.1h4.2c.65 0 1.16-.5 1.2-1.1l.7-9.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <div class="teach-tabs" role="tablist">
+        <button class="teach-tab active" data-tab="lesson" role="tab" aria-selected="true">原理</button>
+        <button class="teach-tab" data-tab="params" role="tab" aria-selected="false">调参</button>
+        <button class="teach-tab" data-tab="data" role="tab" aria-selected="false">测量</button>
+        <button class="teach-tab" data-tab="qa" role="tab" aria-selected="false">答疑 <span class="tab-dot" id="tabDot"></span></button>
+      </div>
+
+      <div class="teach-body">
+        <div class="teach-content active" id="panelLesson" data-panel="lesson"></div>
+        <div class="teach-content" id="panelParams" data-panel="params"></div>
+        <div class="teach-content data-content" id="panelData" data-panel="data"></div>
+        <div class="teach-content qa-content" id="panelQA" data-panel="qa">
+          <div class="chat" id="chat"></div>
+          <div class="qa-composer">
+            <input id="qaInput" type="text" placeholder="追问原理、误差或思考题…" autocomplete="off" aria-label="追问">
+            <button id="btnQaSend" type="button" title="发送">
+              <svg viewBox="0 0 20 20" fill="none"><path d="M3.5 10 16 4l-4.2 12-2.2-4.4L3.5 10Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="m9.6 11.6 3.1-3.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="teach-foot">
+        <button class="foot-trace" id="btnTrace" type="button" title="查看智能体工具调用轨迹">
+          <span class="trace-pulse"></span>
+          AGENT TRACE
+          <span id="traceCount">0</span>
+        </button>
+        <span>·</span>
+        <span>LOCAL RAG</span>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 预览链接 -->
+  <div class="modal-backdrop" id="shareModal" aria-hidden="true">
+    <div class="modal share-modal" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+      <button class="modal-close" data-close="shareModal" type="button" aria-label="关闭">
+        <svg viewBox="0 0 20 20" fill="none"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9.5 14.5 14.5 9.5M8 11l-2.2 2.2a3.5 3.5 0 0 0 5 5L13 16M12 8l2.2-2.2a3.5 3.5 0 0 1 5 5L17 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </div>
+      <span class="eyebrow">SHAREABLE PREVIEW</span>
+      <h2 id="shareTitle">预览链接已生成</h2>
+      <p class="modal-desc">链接包含当前实验与全部参数。打开后会恢复同一组三维场景、光路和教学讲解，可直接旋转、缩放与调参。</p>
+      <div class="share-url-box">
+        <input id="shareUrl" type="text" readonly aria-label="预览链接">
+        <button id="btnCopyLink" type="button">
+          <svg viewBox="0 0 20 20" fill="none"><rect x="7" y="7" width="9" height="9" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M13 7V5.8A1.8 1.8 0 0 0 11.2 4H5.8A1.8 1.8 0 0 0 4 5.8v5.4A1.8 1.8 0 0 0 5.8 13H7" stroke="currentColor" stroke-width="1.3"/></svg>
+          复制
+        </button>
+      </div>
+      <div class="share-meta" id="shareMeta"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" data-close="shareModal" type="button">留在当前页</button>
+        <a class="btn btn-primary" id="btnOpenLink" href="#" target="_blank" rel="noopener">
+          打开预览
+          <svg viewBox="0 0 20 20" fill="none"><path d="M7 4.5h8.5V13M15 5 5 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </a>
+      </div>
+      <div class="share-note"><span class="local-dot"></span>本地服务地址 · 请保持 <code>start.bat</code> 运行</div>
+    </div>
+  </div>
+
+  <!-- 使用指南 -->
+  <div class="modal-backdrop" id="guideModal" aria-hidden="true">
+    <div class="modal guide-modal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+      <button class="modal-close" data-close="guideModal" type="button" aria-label="关闭">
+        <svg viewBox="0 0 20 20" fill="none"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <span class="eyebrow">QUICK START</span>
+      <h2 id="guideTitle">三步开始实验</h2>
+      <div class="guide-steps">
+        <div class="guide-step"><span>01</span><div><strong>用一句话生成场景</strong><p>在底部控制台输入“画出迈克尔逊干涉仪结构”或“演示科里奥利力在地球自转中的效果”。智能体会解析实验、规划组件并渲染 3D 场景。</p></div></div>
+        <div class="guide-step"><span>02</span><div><strong>旋转、拆解与调参</strong><p>拖动旋转、滚轮缩放；点击右上角“拆解视图”分离光学元件。在右侧“参数调节”中改变波长、缝距、纬度等，观察条纹或轨迹实时变化。</p></div></div>
+        <div class="guide-step"><span>03</span><div><strong>追问原理，生成链接</strong><p>点击 3D 标签查看元件注解，或在“答疑”中追问误差和思考题。点击“生成预览链接”，即可复制包含当前参数的可访问地址。</p></div></div>
+      </div>
+      <div class="guide-tip">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M10 2.8a5.7 5.7 0 0 0-3.4 10.3c.6.5.9 1.1.9 1.8v.4h5v-.4c0-.7.3-1.3.9-1.8A5.7 5.7 0 0 0 10 2.8Z" stroke="currentColor" stroke-width="1.2"/><path d="M8.2 17.2h3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <span>场景为教学重构，部分不可见尺度的几何量（缝距、地球自转偏转）经过可视化放大，界面会标注真实数值。</span>
+      </div>
+      <div class="modal-actions"><button class="btn btn-primary" data-close="guideModal" type="button">开始探索</button></div>
+    </div>
+  </div>
+
+  <!-- PhET 资源映射 -->
+  <div class="modal-backdrop" id="phetModal" aria-hidden="true">
+    <div class="modal phet-modal" role="dialog" aria-modal="true" aria-labelledby="phetTitle">
+      <button class="modal-close" data-close="phetModal" type="button" aria-label="关闭">
+        <svg viewBox="0 0 20 20" fill="none"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="phet-modal-head">
+        <div class="phet-badge">PhET</div>
+        <div>
+          <span class="eyebrow">RESOURCE MAPPING</span>
+          <h2 id="phetTitle">PhET 中文站配套资源</h2>
+        </div>
+      </div>
+      <p class="modal-desc">本项目的 3D 场景由 Three.js 在本地重构；PhET 作为实验现象、教学设计与可视化表达的重要参考。以下为与各实验最接近的 PhET 中文页面。</p>
+      <div class="phet-list" id="phetList"></div>
+      <div class="guide-tip compact">
+        <span>说明：PhET 现有 HTML5 模拟以二维交互为主，迈克尔逊干涉仪与科里奥利力没有同名模拟，因此采用“最接近资源 + 本地 3D 重构”的方式补足。</span>
+      </div>
+      <div class="modal-actions">
+        <a class="btn btn-primary" href="https://phet.colorado.edu/zh_CN/" target="_blank" rel="noopener">打开 PhET 中文站
+          <svg viewBox="0 0 20 20" fill="none"><path d="M7 4.5h8.5V13M15 5 5 15" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 评委演示 -->
+  <div class="modal-backdrop" id="demoModal" aria-hidden="true">
+    <div class="modal demo-modal" role="dialog" aria-modal="true" aria-labelledby="demoTitle">
+      <button class="modal-close" data-close="demoModal" type="button" aria-label="关闭">
+        <svg viewBox="0 0 20 20" fill="none"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <div class="demo-modal-icon">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M8 5.5v13l10-6.5L8 5.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="eyebrow">JUDGE DEMO · 90 SECONDS</span>
+      <h2 id="demoTitle">三条“精密测量”演示线</h2>
+      <p class="modal-desc">从 9 个实验中挑出 3 个最适合比赛演示的实验。每条线都包含：真实测量数据、拟合/不确定度、学习证据与可分享预览链接。演示过程中可以直接与 3D 场景互动。</p>
+      <div class="demo-choices">
+        <button class="demo-choice" data-demo="michelson" type="button">
+          <span class="demo-choice-no">01</span>
+          <span><strong>光学 · 测出激光波长</strong><small>条纹计数 → λ → 不确定度</small></span>
+          <svg viewBox="0 0 20 20" fill="none"><path d="M7 4.5 12.5 10 7 15.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button class="demo-choice" data-demo="photoelectric" type="button">
+          <span class="demo-choice-no">02</span>
+          <span><strong>量子 · 测出普朗克常量</strong><small>Uₛ–ν 拟合 → h/e → h</small></span>
+          <svg viewBox="0 0 20 20" fill="none"><path d="M7 4.5 12.5 10 7 15.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+        <button class="demo-choice" data-demo="cavendish" type="button">
+          <span class="demo-choice-no">03</span>
+          <span><strong>引力 · 称量地球</strong><small>扭秤偏角 → G → 地球质量</small></span>
+          <svg viewBox="0 0 20 20" fill="none"><path d="M7 4.5 12.5 10 7 15.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="demo-modal-foot">
+        <span>演示会记录工具调用、答题与测量数据，结束后自动打开学习看板。</span>
+        <button class="btn btn-ghost" id="btnDemoDashboard" type="button">先看学习看板</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 智能体轨迹 -->
+  <div class="modal-backdrop" id="traceModal" aria-hidden="true">
+    <div class="modal trace-modal" role="dialog" aria-modal="true" aria-labelledby="traceTitle">
+      <button class="modal-close" data-close="traceModal" type="button" aria-label="关闭">
+        <svg viewBox="0 0 20 20" fill="none"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <span class="eyebrow">AGENT RUNTIME · TOOL CALLS</span>
+      <h2 id="traceTitle">智能体工具调用轨迹</h2>
+      <p class="modal-desc">这不是一段“假动画”：每次生成、调参、检索、测量和校验都会记录为一次工具调用。当前运行的是<strong>本地规划器 + 检索增强 + 确定性物理工具</strong>，可替换为 LLM Planner。</p>
+      <div class="trace-summary" id="traceSummary"></div>
+      <div class="trace-list" id="traceList"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btnTraceCopy" type="button">复制轨迹</button>
+        <button class="btn btn-primary" data-close="traceModal" type="button">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 学习看板 -->
+  <div class="modal-backdrop" id="dashboardModal" aria-hidden="true">
+    <div class="modal dashboard-modal" role="dialog" aria-modal="true" aria-labelledby="dashboardTitle">
+      <button class="modal-close" data-close="dashboardModal" type="button" aria-label="关闭">
+        <svg viewBox="0 0 20 20" fill="none"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <span class="eyebrow">LEARNING ANALYTICS · LOCAL</span>
+      <h2 id="dashboardTitle">学习看板</h2>
+      <p class="modal-desc">单机学习档案：记录实验覆盖、工具调用、测量数据、答题与误区。数据保存在本机浏览器，不上传云端。</p>
+      <div class="dash-stats" id="dashStats"></div>
+      <p class="dash-hint" id="dashHint"></p>
+      <div class="dash-columns">
+        <div class="dash-block"><h3>实验使用分布</h3><div id="dashChart"></div></div>
+        <div class="dash-block"><h3>常见误区</h3><div id="dashMisconceptions"></div></div>
+      </div>
+      <div class="dash-block"><h3>最近学习事件</h3><div class="dash-timeline" id="dashTimeline"></div></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="btnSeedDashboard" type="button">载入演示数据</button>
+        <button class="btn btn-ghost" id="btnResetMemory" type="button">清空本机数据</button>
+        <button class="btn btn-primary" data-close="dashboardModal" type="button">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 评委演示浮层 -->
+  <div class="demo-coach" id="demoCoach" hidden>
+    <div class="coach-head">
+      <span><i></i>JUDGE DEMO · <span id="demoAct">精密测量</span></span>
+      <button id="btnCloseDemo" type="button" aria-label="退出演示">×</button>
+    </div>
+    <div class="coach-progress" id="demoProgress"></div>
+    <div class="coach-body" id="demoBody"></div>
+  </div>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <script defer src="vendor/three.min.js"></script>
+  <script defer src="vendor/OrbitControls.js"></script>
+  <script defer src="assets/js/core.js"></script>
+  <script defer src="assets/js/knowledge.js"></script>
+  <script defer src="assets/js/knowledge-extra.js"></script>
+  <script defer src="assets/js/retrieval.js"></script>
+  <script defer src="assets/js/scenes/michelson.js"></script>
+  <script defer src="assets/js/scenes/coriolis.js"></script>
+  <script defer src="assets/js/scenes/double-slit.js"></script>
+  <script defer src="assets/js/scenes/pendulum.js"></script>
+  <script defer src="assets/js/scenes/photoelectric.js"></script>
+  <script defer src="assets/js/scenes/faraday.js"></script>
+  <script defer src="assets/js/scenes/angular-momentum.js"></script>
+  <script defer src="assets/js/scenes/bernoulli.js"></script>
+  <script defer src="assets/js/scenes/cavendish.js"></script>
+  <script defer src="assets/js/agent.js"></script>
+  <script defer src="assets/js/app.js"></script>
+</body>
+</html>
